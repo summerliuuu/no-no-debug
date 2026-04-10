@@ -1,0 +1,7 @@
+{
+  "name": "no-no-debug",
+  "version": "1.1.0",
+  "description": "Self-evolution system for AI coding assistants",
+  "skills": ["no-no-debug"],
+  "triggers": ["error review", "错误追踪", "进化报告", "evolution report"]
+}

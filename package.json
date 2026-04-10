@@ -1,0 +1,13 @@
+{
+  "name": "no-no-debug",
+  "version": "1.1.0",
+  "description": "A self-evolution system for AI coding assistants — tracks errors, builds rules, gets smarter every week",
+  "keywords": ["claude-code", "skill", "self-improvement", "error-tracking", "self-evolution", "ai-agent"],
+  "homepage": "https://github.com/summerliuuu/no-no-debug",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/summerliuuu/no-no-debug"
+  },
+  "author": "summerliuuu",
+  "license": "MIT"
+}
