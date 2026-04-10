@@ -89,7 +89,8 @@ claude skill add summerliuuu/no-no-debug
 
 ## 兼容
 
-- Claude Code CLI / 桌面版 / 网页版
+- **Claude Code** — 完整体验，含自动 hook 和一行安装
+- **其他 AI 编程助手**（ChatGPT、Cursor、Copilot 等）— 将 SKILL.md 内容粘贴到系统提示词即可使用核心功能
 - 任何项目、任何语言
 - 推荐搭配 claude-mem（用于 session 搜索）
 

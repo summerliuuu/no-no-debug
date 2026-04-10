@@ -89,7 +89,8 @@ Zero configuration. Tracking files and hooks are initialized automatically on fi
 
 ## Compatibility
 
-- Claude Code CLI / Desktop / Web
+- **Claude Code** — full experience with auto hooks and one-line install
+- **Other AI coding assistants** (ChatGPT, Cursor, Copilot, etc.) — paste SKILL.md content into your system prompt to use core features
 - Any project, any language
 - Pairs well with claude-mem (for session search)
 
