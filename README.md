@@ -81,11 +81,17 @@ Automatically configures Claude Code hooks on install:
 
 ## Installation
 
+### Claude Code (recommended — full experience with auto hooks)
 ```bash
 claude skill add summerliuuu/no-no-debug
 ```
-
 Zero configuration. Tracking files and hooks are initialized automatically on first run.
+
+### ChatGPT / Cursor / Copilot / Other AI assistants
+1. Copy the contents of [SKILL.md](./SKILL.md)
+2. Paste it into your system prompt or custom instructions
+3. Core features (3-gate checkpoint, periodic review, rule accumulation) work immediately
+4. Auto hooks are Claude Code only — other tools rely on the AI following the rules in SKILL.md
 
 ## Compatibility
 
