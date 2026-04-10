@@ -1,107 +1,107 @@
 # no-no-debug
 
-AI 编程助手的自我进化系统
+A self-evolution system for AI coding assistants
 
-## 解决什么问题
+## What problem does this solve?
 
-写代码 10 分钟，debug 2 小时。
+10 minutes writing code, 2 hours debugging.
 
-这个 skill 补上 AI 缺失的跨 session 错误记忆，做到三件事：
+This skill fills the gap in AI's cross-session error memory, delivering three things:
 
-1. 大幅减少 debug 时间
-2. 提高代码质量
-3. 建立自我进化机制
+1. Dramatically less debug time
+2. Higher code quality
+3. A self-evolution feedback loop
 
-持续迭代，用得越久，错误越少。
+The longer you use it, the fewer mistakes get repeated.
 
-## 工作机制
+## How it works
 
-### 1. 实时记录（自动）
-AI 被纠正、代码报错、部署失败、测试不通过时，自动写入本地 error_log.md，带时间戳。不需要你说"记下来"。
+### 1. Real-time Logging (automatic)
+When the AI is corrected, code errors occur, deploys fail, or tests don't pass — it automatically appends to a local error_log.md with a timestamp. No need to say "write that down."
 
-### 2. 三道门（每次改代码时）
-改之前：这会影响什么？
-改之后：真的验证了吗？
-部署前：用非管理员账号测了吗？
+### 2. Three Gates (on every code change)
+Before the change: what does this affect?
+After the change: did you actually verify it?
+Before deploying: did you test with a non-admin account?
 
-静默运行，不产生输出。
+Runs silently. No output when all gates pass.
 
-### 3. 定期审查（每 3 天自动触发）
-读取 error_log.md，按维度分类统计，更新 error_tracker.md，输出进化报告。
-审查频率可配置：1 天 / 3 天（默认）/ 7 天。
+### 3. Periodic Review (auto-triggers every 3 days)
+Reads error_log.md, categorizes by dimension, updates error_tracker.md, outputs an evolution report.
+Review frequency is configurable: 1 day / 3 days (default) / 7 days.
 
-### 4. 规则沉淀
-新类型的错误 → 自动创建预防规则。
-重复犯的错误 → 计数器累加，规则强化。
-连续 4 个周期未犯 → 标记为已根治。
+### 4. Rule Accumulation
+New error type → automatically creates a prevention rule.
+Repeated offense → counter increments, rule strengthens.
+4 consecutive clean periods → marked as cured.
 
-规则跨 session 持久化，不会丢失。
+Rules persist across sessions — nothing gets lost.
 
-### 5. 确认机制
-以下情况必须先跟用户确认，不能直接动手：
-- 新功能开发（不是 bug 修复）
-- 涉及数据库、环境、部署的变更
-- 发布到外部平台
-- 用户提出新想法或新方向时
+### 5. Confirmation Gate
+The following situations require user confirmation before proceeding:
+- New feature development (not a bug fix)
+- Changes involving databases, environments, or deployments
+- Publishing to external platforms
+- When the user raises a new idea or new direction mid-task
 
-### 6. 自动 Hook
-安装时自动配置 Claude Code hook：
-- 命令报错 → 自动记录到 error_log.md
-- 编辑文件后 → 自动提醒验证
-- 用户纠正时 → 自动记录纠正内容
+### 6. Auto Hooks
+Automatically configures Claude Code hooks on install:
+- Command errors → auto-logged to error_log.md
+- After editing a file → auto-reminder to verify
+- When user corrects the AI → correction content auto-logged
 
-## 追踪维度
+## Tracked Dimensions
 
-| 维度 | 追踪什么 |
-|------|---------|
-| 数据准确性 | 展示的数字/公式是否与代码一致 |
-| 环境安全 | 配置变更是否影响了登录或数据库 |
-| 预见性 | 权限、迁移、缓存问题是否在部署前发现 |
-| 用户视角 | 功能是否从用户角度走得通 |
-| 验证完整性 | 修复后是否做了端到端验证 |
-| 记忆一致性 | 是否读取了已有的记录而不是重复询问 |
-| 工具判断 | 失败的工具是否及时更换 |
-| 审查覆盖 | 总结/复盘是否完整，无遗漏 |
-| 操作精准 | 修改是否产生了非预期的副作用 |
-| 先查后做 | 遇到不熟悉的工具/版本时，是否先查文档再动手 |
-| 简洁性 | 3 行能解决的问题是否写了 300 行 |
-| 回归意识 | 修一个 bug 是否引入了新 bug |
-| 风格一致性 | 是否遵循项目已有的代码风格和架构 |
-| 独立判断 | 用户前提有误时是否敢于指出而不是盲目执行 |
-| 人类将要犯的蠢 | 还没犯，但迟早会犯的那些 |
-| AI 将要犯的蠢 | 同上，但是 AI 版本 |
+| Dimension | What it tracks |
+|-----------|---------------|
+| Data Accuracy | Do displayed numbers/formulas match actual code |
+| Environment Safety | Did config changes break login or the database |
+| Foresight | Were permission, migration, or cache issues caught before deploy |
+| User Perspective | Does the feature work end-to-end from the user's account |
+| Verification | Was there a real end-to-end test after the fix |
+| Memory Consistency | Did the AI read existing records instead of asking again |
+| Tool Judgment | Did failing tools get swapped out promptly |
+| Review Completeness | Were reviews and summaries thorough with nothing missed |
+| Operational Precision | Did changes produce unintended side effects |
+| Check Before Doing | With unfamiliar tools/versions, was documentation checked first |
+| Conciseness | Was a 3-line solution turned into 300 lines |
+| Regression Awareness | Did fixing one bug introduce a new one |
+| Style Consistency | Does new code follow the project's existing style and architecture |
+| Independent Judgment | When the user's premise is wrong, does the AI push back instead of blindly executing |
+| Dumb things humans will do | Not yet committed, but inevitable |
+| Dumb things AI will do | Same, but the AI edition |
 
-## 实测数据
+## Real-world data
 
-| 周期 | 错误数 | 说明 |
-|------|--------|------|
-| 第 1 周 | 29 | 基线，识别出 10 个维度 |
-| 第 2 周 | 6 | 规则开始生效 |
-| 第 3 周 | ~0 | 持续运行中 |
+| Period | Errors | Notes |
+|--------|--------|-------|
+| Week 1 | 29 | Baseline, 10 dimensions identified |
+| Week 2 | 6 | Rules starting to take effect |
+| Week 3 | ~0 | Still running |
 
-## 安装
+## Installation
 
 ```bash
 claude skill add summerliuuu/no-no-debug
 ```
 
-零配置，首次运行自动初始化追踪文件和 hook。
+Zero configuration. Tracking files and hooks are initialized automatically on first run.
 
-## 兼容
+## Compatibility
 
-- Claude Code CLI / 桌面版 / 网页版
-- 任何项目、任何语言
-- 推荐搭配 claude-mem（用于 session 搜索）
+- Claude Code CLI / Desktop / Web
+- Any project, any language
+- Pairs well with claude-mem (for session search)
 
 ## ⭐
 
-感谢你在安装时为这个项目点了 Star。
+Thank you for starring this project during installation.
 
-📕 [小红书 @Summer的AI日常](https://xhslink.com/m/6fWf0EN8e6) — AI 编程实战记录
+📕 [Xiaohongshu @Summer的AI日常](https://xhslink.com/m/6fWf0EN8e6) — AI coding in practice
 
 ---
 
-🌐 [English Version](./README.en.md)
+🇨🇳 [中文版](./README.zh-CN.md)
 
 ## License
 
