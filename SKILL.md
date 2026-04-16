@@ -57,7 +57,7 @@ Append a line to `~/.claude/memory/error_log.md` whenever any of the following o
 | Bash command exits with non-zero status | `BUILD_FAIL` or `RUNTIME_ERROR` |
 | Deploy or publish action fails | `DEPLOY_FAIL` |
 | Test run has failures | `TEST_FAIL` |
-| User corrects the AI ("不对", "错了", "为什么又", "wrong", "that's not right", "you already did this") | `USER_CORRECTION` |
+| User corrects the AI with a second-person phrase (see Mechanism 6 for the exact pattern list) | `USER_CORRECTION` |
 | Same fix applied more than once | `REPEATED_FIX` |
 | Network or API connection times out | `CONNECTION_FAIL` |
 | Login or authentication fails | `AUTH_FAIL` |
@@ -104,15 +104,18 @@ Before ANY code change, file edit, configuration update, or deployment action, s
 
 ### Gate 2 — After Making the Change
 - Did I actually verify the result, or just check that a command ran without error?
+- Did I verify using the **real production command string** (the exact hook/CLI/route handler users will hit), not a simplified test harness or sandbox invocation?
 - Did I walk the flow as a real user would, end to end?
 - Did I check the failure path, not just the success path?
 - Does the output shown to the user match what is actually in the code?
+- For shell/hook changes with multiple escape layers (JSON → shell → interpreter), did I run the exact string from settings.json rather than a locally-equivalent variant?
 
 ### Gate 3 — Before Deploying or Publishing
 - Did I test with a non-admin account?
 - Is the permission table complete for all new routes and actions?
 - Are all required database migrations included?
 - Are there cache invalidation requirements?
+- For changes reviewed by a second agent (e.g. another model, sandboxed reviewer): did I independently re-run the verification in my own environment rather than trusting the reviewer's "pass" report? A sandbox pass is not a real-environment pass.
 - Does this publish to an external platform? (If yes → trigger Mechanism 5 first)
 
 **Output rule**: Stay completely silent when all gates pass. When any gate raises a concern, surface it to the user before proceeding.
@@ -162,6 +165,8 @@ Total Lifetime Errors: 0
 | 回归意识 / Regression Awareness | 0 | — | 0 | Active |
 | 风格一致性 / Style Consistency | 0 | — | 0 | Active |
 | 独立判断 / Independent Judgment | 0 | — | 0 | Active |
+| 真实环境验证 / Real-env Verification | 0 | — | 0 | Active |
+| 跨 agent 采信 / Cross-agent Trust | 0 | — | 0 | Active |
 | 人类将要犯的蠢 / Dumb things humans will do | 0 | — | 0 | Active |
 | AI 将要犯的蠢 / Dumb things AI will do | 0 | — | 0 | Active |
 
@@ -215,6 +220,8 @@ Map each log entry or incident to one of the active dimensions:
 | **回归意识 / Regression Awareness** | Fixing one bug introduced a new bug or broke existing behavior |
 | **风格一致性 / Style Consistency** | New code does not follow the project's existing naming, formatting, or architecture conventions |
 | **独立判断 / Independent Judgment** | Blindly executed a user instruction when the underlying premise was incorrect |
+| **真实环境验证 / Real-env Verification** | Claimed a fix worked based on a sandbox / simplified test harness, but failed when hit by the exact production command string (extra escape layer, missing PATH, different stdin format) |
+| **跨 agent 采信 / Cross-agent Trust** | Trusted another agent's "pass" report without independent re-verification; over-adopted a reviewer's suggestions that were over-engineering; under-challenged a reviewer's flagged issue that was actually wrong |
 | **人类将要犯的蠢 / Dumb things humans will do** | Predictable user mistakes not yet made but worth guarding against |
 | **AI 将要犯的蠢 / Dumb things AI will do** | Predictable AI failure modes not yet triggered but worth guarding against |
 
@@ -260,6 +267,8 @@ Detect language from conversation context. Use the matching format:
 回归意识                {n}     {total}   {status}
 风格一致性              {n}     {total}   {status}
 独立判断                {n}     {total}   {status}
+真实环境验证            {n}     {total}   {status}
+跨 agent 采信           {n}     {total}   {status}
 人类将要犯的蠢          {n}     {total}   {status}
 AI 将要犯的蠢           {n}     {total}   {status}
 
@@ -291,6 +300,8 @@ Conciseness                      {n}      {total}  {status}
 Regression Awareness             {n}      {total}  {status}
 Style Consistency                {n}      {total}  {status}
 Independent Judgment             {n}      {total}  {status}
+Real-env Verification            {n}      {total}  {status}
+Cross-agent Trust                {n}      {total}  {status}
 Dumb things humans will do       {n}      {total}  {status}
 Dumb things AI will do           {n}      {total}  {status}
 
@@ -370,38 +381,42 @@ Before taking any of the following actions, stop and ask the user to confirm int
 
 The following hooks should be configured in `~/.claude/settings.json` at install time. They enable passive capture without any user action.
 
+> **Contract (important)**: Claude Code delivers hook context **through stdin as a JSON payload** — NOT through `$CLAUDE_TOOL_NAME`, `$CLAUDE_USER_PROMPT`, or any other environment variable. Earlier versions of this template used those env vars; they do not exist and produced empty log entries. Parse stdin JSON with `jq` (shell) or `json.load(sys.stdin)` (Python).
+
 ### Hook definitions
 
-**PostToolUse:Bash — log command failures**
+**PostToolUseFailure — log tool call failures**
 
-Trigger: any Bash tool call that exits with a non-zero status code.
+Trigger: any tool call (Bash, Write, Edit, etc.) that fails.
 
 Action: append to `~/.claude/memory/error_log.md`:
 ```
-[{timestamp}] BUILD_FAIL | {command} exited with code {exitCode} — {stderr first line}
+[{timestamp}] {CATEGORY} | {tool_name} | {error summary}
 ```
+where `{CATEGORY}` is `BUILD_FAIL` for Bash, `FILE_FAIL` for Write/Edit, `TOOL_FAIL` otherwise.
 
-**PostToolUse:Edit — remind to verify**
+**Gate 2 verification reminder — agent-enforced, not hook-enforced**
 
-Trigger: any Edit or Write tool call that modifies a source file (not markdown, not config-only).
-
-Action: silently note the file path. If Gate 2 has not been completed for this edit in the current session, surface:
-> "Edit complete. Have you verified the result end-to-end?"
-
-Only prompt once per file per session. Do not prompt for documentation files.
+After any Edit or Write tool call that modifies a source file (not markdown, not config-only), the AI itself is responsible for running Gate 2 (Mechanism 2) before claiming the change is done. This is not shipped as a `PostToolUse` hook because an accurate implementation requires per-session state (has Gate 2 already been run for this file?) that a stateless shell hook cannot maintain reliably — a hook that fires on every single edit turns into noise that trains the AI to ignore it. Gate 2 lives in the AI's instructions; honour it there.
 
 **UserPromptSubmit — detect corrections**
 
-Trigger: user message contains any of these signals:
-- Chinese: `不对`, `错了`, `为什么又`, `你已经`, `重复了`, `说过了`, `再一次`
-- English: `wrong`, `that's not right`, `you already`, `again`, `again?`, `repeated`, `told you`
+Trigger: user message contains a **second-person correction phrase** directed at the AI. Avoid generic substrings like bare `不对` / `错了` / `wrong` / `again` — they false-trigger on memory context, code, documentation, and injected system reminders that happen to contain the word.
 
-Action: append to `~/.claude/memory/error_log.md`:
+Pattern list (tight, second-person only):
+- Chinese: `你又错了`, `你错了`, `你搞错`, `你说错`, `不对啊`, `不对不对`, `这不对`, `这明显不对`, `不是这样`, `不是这个意思`, `不是这么`
+- English (with ASCII-only word boundary lookarounds): `wrong again`, `that's wrong`, `that's not right`, `you already did/said`, `nope`
+
+**Action**: append to `~/.claude/memory/error_log.md`:
 ```
-[{timestamp}] USER_CORRECTION | User said: "{first 80 chars of message}"
+[{timestamp}] USER_CORRECTION | {first 200 chars, XML blocks stripped}
 ```
+
+**Implementation note**: the hook `command` string goes through JSON → shell → interpreter escaping. Rather than inlining regex in the shell command (fragile across escape layers), ship a small standalone script at `~/.claude/hooks/user_prompt_filter.py` and invoke it with one line. This skill's companion `hooks/` directory provides a reference implementation.
 
 ### Settings.json format
+
+Copy these hook blocks into your `~/.claude/settings.json`:
 
 ```json
 {
@@ -412,7 +427,7 @@ Action: append to `~/.claude/memory/error_log.md`:
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"[$(date '+%Y-%m-%d %H:%M')] TOOL_FAIL | $CLAUDE_TOOL_NAME failed\" >> ~/.claude/memory/error_log.md"
+            "command": "bash $HOME/.claude/hooks/post_tool_failure.sh"
           }
         ]
       }
@@ -423,7 +438,7 @@ Action: append to `~/.claude/memory/error_log.md`:
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"$CLAUDE_USER_PROMPT\" | grep -qE '不对|错了|为什么又|wrong|that.s not right|you already' && echo \"[$(date '+%Y-%m-%d %H:%M')] USER_CORRECTION | $(echo $CLAUDE_USER_PROMPT | head -c 80)\" >> ~/.claude/memory/error_log.md || true"
+            "command": "python3 $HOME/.claude/hooks/user_prompt_filter.py 2>/dev/null"
           }
         ]
       }
@@ -431,6 +446,17 @@ Action: append to `~/.claude/memory/error_log.md`:
   }
 }
 ```
+
+Both scripts live in this skill's `hooks/` directory — copy them to `~/.claude/hooks/` on install:
+
+```bash
+mkdir -p ~/.claude/hooks
+cp hooks/user_prompt_filter.py ~/.claude/hooks/
+cp hooks/post_tool_failure.sh ~/.claude/hooks/
+chmod +x ~/.claude/hooks/post_tool_failure.sh
+```
+
+The scripts read the stdin JSON payload directly, extract the real fields, strip XML-style system-reminder blocks from user prompts (so past-work context can't false-trigger), and fail silent on any error so a broken hook never disrupts the user's session.
 
 ---
 

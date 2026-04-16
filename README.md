@@ -2,6 +2,16 @@
 
 A self-evolution system for AI coding assistants
 
+> **v1.2.0 — critical hook fix**. Earlier releases shipped a `settings.json`
+> template that referenced `$CLAUDE_TOOL_NAME` / `$CLAUDE_USER_PROMPT`
+> environment variables that don't exist — every install was silently writing
+> empty `TOOL_FAIL |  failed` log lines and never capturing real corrections.
+> Hook context is delivered via **stdin JSON**. v1.2.0 replaces the template
+> with two small standalone scripts under `hooks/` that parse stdin correctly,
+> strip injected XML context blocks to kill false triggers, and fix Python's
+> CJK word-boundary edge case. See [CHANGELOG.md](./CHANGELOG.md) for the
+> migration path from v1.1.0.
+
 ## What problem does this solve?
 
 10 minutes writing code, 2 hours debugging.
@@ -68,6 +78,8 @@ Automatically configures Claude Code hooks on install:
 | Regression Awareness | Did fixing one bug introduce a new one |
 | Style Consistency | Does new code follow the project's existing style and architecture |
 | Independent Judgment | When the user's premise is wrong, does the AI push back instead of blindly executing |
+| Real-env Verification | Was the fix validated with the real production command, not a sandbox/test harness |
+| Cross-agent Trust | Did the AI re-verify another agent's "pass" report instead of trusting it blindly |
 | Dumb things humans will do | Not yet committed, but inevitable |
 | Dumb things AI will do | Same, but the AI edition |
 
@@ -86,6 +98,19 @@ Automatically configures Claude Code hooks on install:
 claude skill add summerliuuu/no-no-debug
 ```
 Zero configuration. Tracking files and hooks are initialized automatically on first run.
+
+If you're installing manually or upgrading from v1.1.0, also copy the hook scripts:
+
+```bash
+mkdir -p ~/.claude/hooks
+cp hooks/user_prompt_filter.py ~/.claude/hooks/
+cp hooks/post_tool_failure.sh ~/.claude/hooks/
+chmod +x ~/.claude/hooks/post_tool_failure.sh
+```
+
+Then merge the `PostToolUseFailure` / `UserPromptSubmit` blocks from `SKILL.md` → Mechanism 6 into `~/.claude/settings.json`.
+
+**Prerequisites.** The shipped hooks use `python3` (UserPromptSubmit filter) and `jq` (PostToolUseFailure parser). Both ship by default on recent macOS and most Linux distros; if either is missing the corresponding hook degrades gracefully — `python3` missing means the correction detector silently no-ops, `jq` missing writes a one-time `jq_not_installed` marker to the log. Install with `brew install jq` (macOS) or your package manager if you want full coverage.
 
 ### ChatGPT / Cursor / Copilot / Other AI assistants
 1. Copy the contents of [SKILL.md](./SKILL.md)
