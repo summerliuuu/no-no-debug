@@ -2,13 +2,11 @@
 
 AI 编程助手的自我进化系统
 
-> **v1.2.0 关键 hook 修复**。之前版本 `settings.json` 模板引用了根本不存在的
-> `$CLAUDE_TOOL_NAME` / `$CLAUDE_USER_PROMPT` 环境变量 —— 所有已安装的用户都在
-> 静默写入空白的 `TOOL_FAIL |  failed` 日志行，真正的用户纠正也从未被捕获。
-> Claude Code 的 hook 上下文是通过 **stdin JSON** 传递的。v1.2.0 把模板替换成
-> `hooks/` 目录下两个小的独立脚本，正确解析 stdin、剥离注入的 XML 上下文块
-> 以消除误触发、修复 Python CJK word-boundary 的坑。从 v1.1.0 升级的步骤见
-> [CHANGELOG.md](./CHANGELOG.md)。
+> **v1.3.0 — 定期审查终于真正自动了。** 之前版本承诺「每 3 天自动触发审查」，
+> 但实际没有任何强制机制 —— 审查只在手动输入指令时才会运行，tracker 会无限期
+> 过时。v1.3.0 新增 `hooks/review_reminder.py`，一个 `UserPromptSubmit` hook，
+> 在每条消息时检查 tracker，超期就自动提醒 AI 启动审查。从 v1.2.0 升级只需一步，
+> 见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 解决什么问题
 
@@ -57,6 +55,7 @@ AI 被纠正、代码报错、部署失败、测试不通过时，自动写入�
 - 命令报错 → 自动记录到 error_log.md
 - 编辑文件后 → 自动提醒验证
 - 用户纠正时 → 自动记录纠正内容
+- 审查过期 → 自动提醒启动 Mechanism 3 审查
 
 ## 追踪维度
 
@@ -103,6 +102,7 @@ claude skill add summerliuuu/no-no-debug
 mkdir -p ~/.claude/hooks
 cp hooks/user_prompt_filter.py ~/.claude/hooks/
 cp hooks/post_tool_failure.sh ~/.claude/hooks/
+cp hooks/review_reminder.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/post_tool_failure.sh
 ```
 

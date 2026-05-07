@@ -2,15 +2,13 @@
 
 A self-evolution system for AI coding assistants
 
-> **v1.2.0 — critical hook fix**. Earlier releases shipped a `settings.json`
-> template that referenced `$CLAUDE_TOOL_NAME` / `$CLAUDE_USER_PROMPT`
-> environment variables that don't exist — every install was silently writing
-> empty `TOOL_FAIL |  failed` log lines and never capturing real corrections.
-> Hook context is delivered via **stdin JSON**. v1.2.0 replaces the template
-> with two small standalone scripts under `hooks/` that parse stdin correctly,
-> strip injected XML context blocks to kill false triggers, and fix Python's
-> CJK word-boundary edge case. See [CHANGELOG.md](./CHANGELOG.md) for the
-> migration path from v1.1.0.
+> **v1.3.0 — periodic review now actually works.** Earlier versions promised
+> "auto-triggers every 3 days" but had no enforcement mechanism — the review
+> only ran when manually invoked, and the tracker went stale silently. v1.3.0
+> ships `hooks/review_reminder.py`, a `UserPromptSubmit` hook that checks
+> the tracker on each message and reminds the AI to run the review when it's
+> overdue. See [CHANGELOG.md](./CHANGELOG.md) for the one-step migration
+> from v1.2.0.
 
 ## What problem does this solve?
 
@@ -59,6 +57,7 @@ Automatically configures Claude Code hooks on install:
 - Command errors → auto-logged to error_log.md
 - After editing a file → auto-reminder to verify
 - When user corrects the AI → correction content auto-logged
+- Review overdue → auto-reminder to start Mechanism 3 review
 
 ## Tracked Dimensions
 
@@ -105,6 +104,7 @@ If you're installing manually or upgrading from v1.1.0, also copy the hook scrip
 mkdir -p ~/.claude/hooks
 cp hooks/user_prompt_filter.py ~/.claude/hooks/
 cp hooks/post_tool_failure.sh ~/.claude/hooks/
+cp hooks/review_reminder.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/post_tool_failure.sh
 ```
 

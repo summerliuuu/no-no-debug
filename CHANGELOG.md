@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] — 2026-05-07
+
+### Fixed
+
+- **Periodic review never auto-triggered.** Mechanism 3 promised "auto-triggers every 3 days" but relied on the AI checking the tracker at session start — with no hook to enforce this, the check never happened. In practice, every install since v1.0.0 had a review cycle that only ran when manually invoked. The `Last Review Date` would go stale indefinitely.
+
+### Added
+
+- `hooks/review_reminder.py` — new `UserPromptSubmit` hook that reads `error_tracker.md` on each user message, checks whether the configured review interval has elapsed (default: 3 days), and outputs a one-line reminder that the AI acts on to start the Mechanism 3 review cycle. A 4-hour cooldown file (`/tmp/.nnd_review_reminded`) prevents the reminder from firing on every single message. Fails silent on any error.
+
+### Changed
+
+- Mechanism 3 auto-trigger documentation rewritten to describe the actual enforcement mechanism (the new hook) instead of the previous aspirational "at session start" language.
+- `settings.json` template now includes the `review_reminder.py` hook alongside the existing `user_prompt_filter.py` in the `UserPromptSubmit` block.
+- Install instructions updated to copy all three hook scripts (was two).
+
+### Migration from 1.2.0
+
+1. Pull the latest and copy the new hook script:
+   ```bash
+   cp hooks/review_reminder.py ~/.claude/hooks/
+   ```
+2. Add the review reminder to your `UserPromptSubmit` hooks in `~/.claude/settings.json`:
+   ```json
+   {
+     "type": "command",
+     "command": "python3 $HOME/.claude/hooks/review_reminder.py 2>/dev/null"
+   }
+   ```
+   Place it alongside the existing `user_prompt_filter.py` entry in the `hooks` array.
+
 ## [1.2.0] — 2026-04-16
 
 ### Fixed (critical — affects every previous install)

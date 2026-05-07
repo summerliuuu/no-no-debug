@@ -125,7 +125,7 @@ Before ANY code change, file edit, configuration update, or deployment action, s
 ## Mechanism 3 — Periodic Review
 
 ### Auto-trigger condition
-At the start of each session, read `~/.claude/memory/error_tracker.md` for `Last Review Date`. If elapsed days since that date are greater than or equal to the configured review frequency (default: 3), run the review automatically.
+A `UserPromptSubmit` hook (`hooks/review_reminder.py`) checks `~/.claude/memory/error_tracker.md` for `Last Review Date` on each user message. If elapsed days since that date are greater than or equal to the configured review frequency (default: 3), the hook outputs a reminder. When you see this reminder, run the review automatically. A 4-hour cooldown prevents repeated reminders within the same session.
 
 ### Manual trigger
 User says any of: `error review`, `错误追踪`, `进化报告`, `evolution report`
@@ -414,6 +414,19 @@ Pattern list (tight, second-person only):
 
 **Implementation note**: the hook `command` string goes through JSON → shell → interpreter escaping. Rather than inlining regex in the shell command (fragile across escape layers), ship a small standalone script at `~/.claude/hooks/user_prompt_filter.py` and invoke it with one line. This skill's companion `hooks/` directory provides a reference implementation.
 
+**UserPromptSubmit — review reminder**
+
+Trigger: every user message (with 4-hour cooldown).
+
+Action: read `~/.claude/memory/error_tracker.md` for `Last Review Date` and `review_frequency`. If the configured number of days (default: 3) has elapsed since the last review, output a one-line reminder:
+```
+[no-no-debug] Error review overdue ({N} days since last review on {date}). Run: error review
+```
+
+The AI sees this reminder in its hook context and automatically starts the Mechanism 3 review cycle. A cooldown file (`/tmp/.nnd_review_reminded`) prevents the reminder from firing on every message — it only re-fires after 4 hours of silence.
+
+Without this hook, the "auto-trigger every 3 days" promise in Mechanism 3 has no enforcement mechanism and never fires.
+
 ### Settings.json format
 
 Copy these hook blocks into your `~/.claude/settings.json`:
@@ -439,6 +452,10 @@ Copy these hook blocks into your `~/.claude/settings.json`:
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/user_prompt_filter.py 2>/dev/null"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/review_reminder.py 2>/dev/null"
           }
         ]
       }
@@ -447,12 +464,13 @@ Copy these hook blocks into your `~/.claude/settings.json`:
 }
 ```
 
-Both scripts live in this skill's `hooks/` directory — copy them to `~/.claude/hooks/` on install:
+All three scripts live in this skill's `hooks/` directory — copy them to `~/.claude/hooks/` on install:
 
 ```bash
 mkdir -p ~/.claude/hooks
 cp hooks/user_prompt_filter.py ~/.claude/hooks/
 cp hooks/post_tool_failure.sh ~/.claude/hooks/
+cp hooks/review_reminder.py ~/.claude/hooks/
 chmod +x ~/.claude/hooks/post_tool_failure.sh
 ```
 
