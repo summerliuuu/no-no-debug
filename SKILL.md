@@ -395,6 +395,12 @@ Action: append to `~/.claude/memory/error_log.md`:
 ```
 where `{CATEGORY}` is `BUILD_FAIL` for Bash, `FILE_FAIL` for Write/Edit, `TOOL_FAIL` otherwise.
 
+Additionally, when the same tool fails **2 or more times within 5 minutes**, outputs a warning with a suggested alternative:
+```
+[no-no-debug] {tool_name} has failed {N} times in 5 minutes. Switch to {alternative}.
+```
+Alternatives: Grep/Glob → `find`+`grep -r` via Bash; Read → verify path with `ls` first; browser MCP tools → different browser tool or `curl`. History auto-cleans after 5 minutes.
+
 **Gate 2 verification reminder — agent-enforced, not hook-enforced**
 
 After any Edit or Write tool call that modifies a source file (not markdown, not config-only), the AI itself is responsible for running Gate 2 (Mechanism 2) before claiming the change is done. This is not shipped as a `PostToolUse` hook because an accurate implementation requires per-session state (has Gate 2 already been run for this file?) that a stateless shell hook cannot maintain reliably — a hook that fires on every single edit turns into noise that trains the AI to ignore it. Gate 2 lives in the AI's instructions; honour it there.

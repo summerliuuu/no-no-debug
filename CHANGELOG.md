@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] — 2026-05-07
+
+### Added
+
+- **Consecutive failure detection in `post_tool_failure.sh`.** The hook now tracks recent failures in a temp file and warns the AI when the same tool fails 2+ times within 5 minutes. The warning includes a suggested alternative tool:
+  - Grep/Glob → `find` + `grep -r` via Bash
+  - Read → `ls` to verify path first
+  - Browser MCP tools → alternative browser tool or `curl`
+  - Other tools → Bash or alternative approach
+- This directly addresses the #1 error pattern from the first evolution report (R1): ripgrep binary failures caused 77 redundant Grep/Glob calls because the AI had no signal to stop retrying.
+
+### Changed
+
+- `post_tool_failure.sh` rewritten to add failure history tracking alongside existing logging. Old logging behavior is fully preserved. History entries are auto-cleaned after 5 minutes.
+
+### Migration from 1.3.0
+
+No migration needed. Just pull the latest and copy:
+```bash
+cp hooks/post_tool_failure.sh ~/.claude/hooks/
+chmod +x ~/.claude/hooks/post_tool_failure.sh
+```
+
 ## [1.3.0] — 2026-05-07
 
 ### Fixed
